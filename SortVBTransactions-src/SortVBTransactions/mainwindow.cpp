@@ -48,6 +48,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	QObject::connect(ui->actionTemplate, &QAction::triggered, this, &MainWindow::openTemplateTriggered);
 	QObject::connect(ui->actionTransaction, &QAction::triggered, this, &MainWindow::openTransactionTriggered);
 	QObject::connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::generateProcessedFile);
+	QObject::connect(ui->addButton, &QPushButton::clicked, this, &MainWindow::addItem);
+	QObject::connect(ui->removeButton, &QPushButton::clicked, this, &MainWindow::removeItem);
 	ui->label->setText(tr("Version %1.%2").arg(VERSION_MAJOR).arg(VERSION_MINOR));
 }
 
@@ -218,6 +220,30 @@ void MainWindow::generateProcessedFile() {
 	}
 	aof_vec.back().printFullTransaction(outfile);
 	outfile.close();
+}
+
+void MainWindow::addItem()
+{
+	QTreeWidgetItem *itm = new QTreeWidgetItem();
+	itm->setText(0, QApplication::translate("MainWindow", "GroupTest", nullptr));
+	itm->setText(1, QApplication::translate("MainWindow", "KeywordTest", nullptr));
+	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+
+	// Check if any item is selected
+	if (!ui->treeWidget->selectedItems().isEmpty()) {
+		ui->treeWidget->selectedItems().first()->addChild(itm);
+	}
+	else {
+		ui->treeWidget->addTopLevelItem(itm);
+	}
+}
+
+void MainWindow::removeItem()
+{
+	// Check if any item is selected
+	if (!ui->treeWidget->selectedItems().isEmpty()) {
+		delete ui->treeWidget->selectedItems().first();
+	}
 }
 
 MainWindow::~MainWindow()

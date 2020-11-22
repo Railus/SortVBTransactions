@@ -21,6 +21,8 @@ public slots:
 	void openTemplateTriggered();
 	void openTransactionTriggered();
 	void generateProcessedFile();
+	void addItem();
+	void removeItem();
 
 private:
     Ui::MainWindow *ui;
