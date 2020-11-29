@@ -18,6 +18,7 @@ set(project_headers
     AreaOfFinance.h
     Transaction.h
     TransactionGroup.h
+	TransactionItem.h
 )
 
 set(project_sources 
