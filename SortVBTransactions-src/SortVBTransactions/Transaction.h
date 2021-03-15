@@ -3,12 +3,14 @@
 #include <stdio.h>
 #include <vector>
 #include "main.h"
+#include <QSharedPointer>
 
 class Transaction
 {
 public:
 	Transaction() = delete;
 	Transaction(std::vector<std::string>);
+	Transaction(QStringList);
 	virtual ~Transaction() {};
 
 	const double& getUmsatz(void) const { return m_umsatz; };
@@ -33,3 +35,25 @@ private:
 	double m_umsatz;
 	char m_soll_haben;
 };
+typedef QSharedPointer<Transaction> TransactionPtr;
+
+
+#include <TransactionItem.h>
+
+// Transaction group
+class cTransactionGroups :
+	public cTransactionElement
+{
+public:
+	cTransactionGroups() {};
+	~cTransactionGroups() {};
+
+	bool clear();
+	bool insertTransaction(TransactionPtr transaction);
+	double write(QTextStream&);
+
+private:
+	QVector<TransactionPtr> m_transactions;
+
+};
+typedef QSharedPointer<cTransactionGroups> TransactionGroupsPtr;
