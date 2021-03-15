@@ -3,7 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
-
+#if 0
 double TransactionGroup::getSum(void) const
 {
 	double ret_val = 0.0;
@@ -98,3 +98,4 @@ void TransactionGroup::printAllTransactions(std::ofstream & iOfstream)
 		std::cout << "Transaction group is empty!" << std::endl;
 	}
 }
+#endif

@@ -15,18 +15,15 @@ set(moc_headers
 	mainwindow.h)
 
 set(project_headers
-    AreaOfFinance.h
     Transaction.h
-    TransactionGroup.h
-	TransactionItem.h
+    TransactionGroups.h
 )
 
 set(project_sources 
 	main.cpp
     mainwindow.cpp
-    AreaOfFinance.cpp
     Transaction.cpp
-    TransactionGroup.cpp)
+    TransactionGroups.cpp)
 	
 qt5_wrap_ui(project_headers_wrapped ${project_ui})	
 qt5_wrap_cpp(project_sources_moc ${moc_headers})

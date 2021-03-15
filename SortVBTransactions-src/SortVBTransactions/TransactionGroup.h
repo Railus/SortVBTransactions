@@ -4,7 +4,7 @@
 #include <vector>
 #include "Transaction.h"
 #include <fstream>
-
+#if 0
 class TransactionGroup
 {
 public:
@@ -28,3 +28,4 @@ private:
 	std::string m_label;
 	std::vector<std::string> m_keywords;
 };
+#endif

@@ -1,3 +1,4 @@
+#include <windows.h>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QFileDialog>
@@ -5,19 +6,11 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QImageReader>
-#include <iostream>
-#include <windows.h>
 #include <QApplication>
-#include "mainwindow.h"
-#include <vector>
-#include <sstream>
-#include <iterator>
+#include <QTextStream>
 #include "main.h"
 #include "Transaction.h"
-#include "TransactionGroup.h"
-#include "AreaOfFinance.h"
-#include "TransactionItem.h"
-#include <QTextStream>
+#include "TransactionGroups.h"
 
 const QString templatePath = "TemplatePath";
 const QString transactionsPath = "TransactionsPath";
@@ -82,7 +75,6 @@ void MainWindow::openTemplateTriggered()
 				if (list1.length() > 0 && !list1[0].isEmpty()) {
 					cTransactionGroups *itm = new cTransactionGroups();
 					itm->setText(0, QApplication::translate("MainWindow", list1[0].toStdString().c_str(), nullptr));
-					//itm->setText(1, QApplication::translate("MainWindow", "KeywordTest", nullptr));
 					itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
 					ui->treeWidget->addTopLevelItem(itm);
 				}
@@ -150,88 +142,9 @@ void MainWindow::generateProcessedFile() {
 	std::wstring currentPath_wstring(currentPath_tchar); //convert to wstring
 	std::string currentPath(currentPath_wstring.begin(), currentPath_wstring.end());//and convert to string.
 
-
-	//OLD
-	std::vector<AreaOfFinance> aof_vec;
-	std::ifstream ifStream(m_template_location.toStdString(), std::ios::in);
-
-	for (std::string line; std::getline(ifStream, line); ) {
-		std::istringstream iss(line);
-		std::vector<std::string> row((std::istream_iterator<WordDelimitedBy<';'>>(iss)), std::istream_iterator<WordDelimitedBy<';'>>());
-		if (row.size() < 1 || row.size() > 3) { // Simple format check
-			return;
-		}
-		if (!row[0].empty()) {
-			AreaOfFinance aof(row[0]);
-			aof_vec.push_back(aof);
-		}
-		else if (row[0].empty() && !row[1].empty() && !row[2].empty()) {
-			TransactionGroup transactionGroup(row[1]);
-			//Split keywords
-			std::istringstream iss(row[2]);
-			std::vector<std::string> keywords((std::istream_iterator<WordDelimitedBy<','>>(iss)), std::istream_iterator<WordDelimitedBy<','>>());
-			for (auto it = keywords.begin(); it != keywords.end(); it++) {
-				if (it->front() == ' ') it->erase(0, 1);
-				transactionGroup.addKeyword(*it);
-			}
-			aof_vec.back().addTransGroup(transactionGroup);
-		}
-	}
-	ifStream.close();
-	ifStream.clear();
-
-	SonstigeAreaOfFinance sonst_aof("Sonstige");
-	TransactionGroup sonst("");
-	sonst.addKeyword(" ");
-	sonst_aof.addTransGroup(sonst);
-
-	aof_vec.push_back(sonst_aof);
-
-	for (std::string line; std::getline(ifStream, line); ) {
-		std::istringstream iss(line);
-		std::vector<std::string> row((std::istream_iterator<WordDelimitedBy<';'>>(iss)), std::istream_iterator<WordDelimitedBy<';'>>());
-		if (row.size() < 1 || row.size() > 3) { // Simple format check
-			return;
-		}
-		if (!row[0].empty()) {
-			AreaOfFinance aof(row[0]);
-			aof_vec.push_back(aof);
-		}
-		else if (row[0].empty() && !row[1].empty() && !row[2].empty()) {
-			TransactionGroup transactionGroup(row[1]);
-			//Split keywords
-			std::istringstream iss(row[2]);
-			std::vector<std::string> keywords((std::istream_iterator<WordDelimitedBy<','>>(iss)), std::istream_iterator<WordDelimitedBy<','>>());
-			for (auto it = keywords.begin(); it != keywords.end(); it++) {
-				if (it->front() == ' ') it->erase(0, 1);
-				transactionGroup.addKeyword(*it);
-			}
-			aof_vec.back().addTransGroup(transactionGroup);
-		}
-	}
-	ifStream.close();
-
 	/**********************/
 	//Read all rows of transaction
 	/**********************/
-	// OLD
-	ifStream.open(m_transaction_location.toStdString());
-	std::vector<std::string> row_vec;
-	std::string temp_row_string;
-
-	for (std::string line; std::getline(ifStream, line); ) {
-		temp_row_string += line;
-
-		if (!temp_row_string.empty()) {
-			if (temp_row_string.back() == '\"' || temp_row_string.back() == ';') {
-				//current line ends with " or ;
-				row_vec.push_back(temp_row_string);
-				temp_row_string.clear();
-			}
-		}
-	}
-
-	// NEW
 	QStringList csv_rows;
 	QFile file(m_transaction_location);
 	if (file.open(QIODevice::ReadOnly)) {
@@ -258,35 +171,6 @@ void MainWindow::generateProcessedFile() {
 	/**********************/
 	//Processing row vector
 	/**********************/
-
-	//OLD
-	// Delete first unnescessary rows including "buchungstag" in the first column
-	for (auto it_vec = row_vec.cbegin(); it_vec != row_vec.cend(); it_vec++) {
-		std::istringstream iss(*it_vec);
-		std::vector<std::string> row((std::istream_iterator<WordDelimitedBy<';'>>(iss)), std::istream_iterator<WordDelimitedBy<';'>>());
-		if (row.size() < 1) { // Simple format check
-			return;
-		}
-		if (row[0] == "\"Buchungstag\"") {
-			row_vec.erase(row_vec.cbegin(), it_vec + 1);
-			break;
-		}
-	}
-	// Delete unnescessary rows at the end including "Anfangssaldo" in the nineth column
-	for (auto it_vec = row_vec.crbegin(); it_vec != row_vec.crend(); it_vec++) {
-		std::istringstream iss(*it_vec);
-		std::vector<std::string> row((std::istream_iterator<WordDelimitedBy<';'>>(iss)), std::istream_iterator<WordDelimitedBy<';'>>());
-		if (row.size() < 10) { // Simple format check
-			return;
-		}
-		if (row[9] == "\"Anfangssaldo\"") {
-			row_vec.erase(--it_vec.base(), row_vec.cend());
-			break;
-		}
-	}
-
-
-	//NEW
 	// Delete first unnescessary rows including "buchungstag" in the first column
 	for (auto it_vec = csv_rows.begin(); it_vec != csv_rows.end(); it_vec++) {
 		QStringList list1 = it_vec->split(";",QString::SkipEmptyParts);
@@ -304,22 +188,6 @@ void MainWindow::generateProcessedFile() {
 
 
 	//Process transactions
-	//OLD
-	for (auto it_vec = row_vec.cbegin(); it_vec != row_vec.cend(); it_vec++) {
-		std::istringstream iss(*it_vec);
-		std::vector<std::string> row((std::istream_iterator<WordDelimitedBy<';'>>(iss)), std::istream_iterator<WordDelimitedBy<';'>>());
-
-		Transaction temp_transaction(row);
-		for (auto it = aof_vec.begin(); it != aof_vec.end(); it++) {
-			if (it->meetsCondition(temp_transaction)) {
-				it->addTransaction(temp_transaction);
-				break;
-			}
-		}
-	}
-
-
-	//NEW
 	for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
 		cTransactionGroups* transactionGroupPtr = dynamic_cast<cTransactionGroups*>(ui->treeWidget->topLevelItem(i));
 		if (transactionGroupPtr != nullptr) {
@@ -349,18 +217,9 @@ void MainWindow::generateProcessedFile() {
 
 	/**********************/
 	//Output of processed data
-	//OLD
-	std::ofstream outfile(m_output_location.toStdString(), std::ofstream::binary);
-
-	for (auto it = aof_vec.begin(); it != aof_vec.end() - 1; it++) {
-		it->print(outfile);
-	}
-	aof_vec.back().printFullTransaction(outfile);
-	outfile.close();
-
-	//NEW
 	file.setFileName(m_output_location);
 	if (file.open(QIODevice::ReadWrite)) {
+		file.resize(0);
 		QTextStream stream(&file);
 		for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
 			cTransactionGroups* transactionGroupPtr = dynamic_cast<cTransactionGroups*>(ui->treeWidget->topLevelItem(i));
@@ -370,9 +229,9 @@ void MainWindow::generateProcessedFile() {
 		}
 		//Print all unsorted transactions
 		if (!unsorted_transactions.isEmpty()) {
-			stream << endl << endl << "Unsortierte Transaktionen" << endl;
+			stream << endl << "Unsortierte Transaktionen" << endl;
 			for (auto it = unsorted_transactions.cbegin(); it != unsorted_transactions.cend(); it++) {
-				stream << QString::fromStdString(it->data()->getLine()) << endl;
+				stream << it->data()->getLine() << endl;
 			}
 		}
 		file.close();
@@ -384,7 +243,6 @@ void MainWindow::addItem()
 {
 	cTransactionGroups *itm = new cTransactionGroups();
 	itm->setText(0, QApplication::translate("MainWindow", "GroupTest", nullptr));
-	//itm->setText(1, QApplication::translate("MainWindow", "KeywordTest", nullptr));
 	itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
 
 	// Check if any item is selected
