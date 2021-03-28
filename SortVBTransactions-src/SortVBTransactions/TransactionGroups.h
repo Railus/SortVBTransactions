@@ -11,11 +11,11 @@ class cTransactionGroups :
 {
 public:
 	cTransactionGroups() {};
-	~cTransactionGroups() {};
+	virtual ~cTransactionGroups() {};
 
-	bool clear();
+	void clear();
 	bool insertTransaction(TransactionPtr transaction);
-	double write(QTextStream&);
+	double outputVolume(QTextStream&);
 
 private:
 	QVector<TransactionPtr> m_transactions;

@@ -17,13 +17,15 @@ set(moc_headers
 set(project_headers
     Transaction.h
     TransactionGroups.h
+    HelperFunctions.h
 )
 
 set(project_sources 
 	main.cpp
     mainwindow.cpp
     Transaction.cpp
-    TransactionGroups.cpp)
+    TransactionGroups.cpp
+	HelperFunctions.cpp)
 	
 qt5_wrap_ui(project_headers_wrapped ${project_ui})	
 qt5_wrap_cpp(project_sources_moc ${moc_headers})

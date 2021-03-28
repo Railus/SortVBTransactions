@@ -6,15 +6,15 @@ Transaction::Transaction(QStringList qlist)
 	if (qlist.size() == TRANSACTION_ROWS) {
 		m_buchungstag = qlist[0];
 		m_valuta = qlist[1];
-		m_auftragsgeber = qlist[2];
-		m_empfaenger = qlist[3];
-		m_kontonr = qlist[4];
+		m_sender = qlist[2];
+		m_receiver = qlist[3];
+		m_accNr = qlist[4];
 		m_iban = qlist[5];
 		m_blz = qlist[6];
 		m_bic = qlist[7];
-		m_verwendungszweck = qlist[8];
-		m_kundenref = qlist[9];
-		m_waehrung = qlist[10];
+		m_reference = qlist[8];
+		m_customRef = qlist[9];
+		m_currency = qlist[10];
 		qlist[11].replace(",", ".");
 		qlist[11].chop(1);
 		qlist[11] = qlist[11].mid(1);
@@ -22,10 +22,10 @@ Transaction::Transaction(QStringList qlist)
 		if (1 < qlist[11].count('.')) { qlist[11].remove(qlist[11].indexOf('.'),1); };
 		m_soll_haben = static_cast<char>(qlist[12].toStdString()[1]);
 		if (m_soll_haben == 'S') {
-			m_umsatz = qlist[11].toDouble(); //delete "/"" at beginning and end of the string
+			m_volume = qlist[11].toDouble(); //delete "/"" at beginning and end of the string
 		}
 		else if (m_soll_haben == 'H') {
-			m_umsatz = -qlist[11].toDouble(); //delete "/"" at beginning and end of the string
+			m_volume = -qlist[11].toDouble(); //delete "/"" at beginning and end of the string
 		}
 		else {
 			qDebug("Missing transaction identifier \'H\'/\'S\'!");
@@ -36,33 +36,34 @@ Transaction::Transaction(QStringList qlist)
 	}
 }
 
-QString Transaction::getLine(void) const {
+void Transaction::writeLine(QTextStream& stream) const {
 	QString ret_string;
-	ret_string += (this->m_buchungstag + ";");
-	ret_string += (this->m_valuta + ";");
-	ret_string += (this->m_auftragsgeber + ";");
-	ret_string += (this->m_empfaenger + ";");
-	ret_string += (this->m_kontonr + ";");
-	ret_string += (this->m_iban + ";");
-	ret_string += (this->m_blz + ";");
-	ret_string += (this->m_bic + ";");
-	ret_string += (this->m_verwendungszweck + ";");
-	ret_string += (this->m_kundenref + ";");
-	ret_string += (this->m_waehrung + ";");
-	QString temp_substring = QString::number(this->m_umsatz);
-	std::replace(temp_substring.begin(), temp_substring.end(), '.',',');
-	ret_string += (temp_substring + ";");
-	ret_string.push_back(this->m_soll_haben);
-	return ret_string;
+	stream << (this->m_buchungstag + ";");
+	stream << (this->m_valuta + ";");
+	stream << (this->m_sender + ";");
+	stream << (this->m_receiver + ";");
+	stream << (this->m_accNr + ";");
+	stream << (this->m_iban + ";");
+	stream << (this->m_blz + ";");
+	stream << (this->m_bic + ";");
+	stream << (this->m_reference + ";");
+	stream << (this->m_customRef + ";");
+	stream << (this->m_currency + ";");
+	stream << (QString::number(this->m_volume).replace('.', ',') + ";");
+	stream << (QString(&this->m_soll_haben,1));
+	stream << endl;
+	stream.flush();
 }
 
 bool Transaction::containsKeyword(const QString& keyword) {
 	bool ret_val = false;
 
-	if (m_empfaenger.contains(keyword,Qt::CaseInsensitive)) {
+	if (m_receiver.contains(keyword,Qt::CaseInsensitive))
+	{
 		ret_val = true;
 	}
-	else if (m_verwendungszweck.contains(keyword, Qt::CaseInsensitive)) {
+	else if (m_reference.contains(keyword, Qt::CaseInsensitive))
+	{
 		ret_val = true;
 	}
 

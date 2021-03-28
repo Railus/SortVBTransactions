@@ -15,7 +15,7 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-	void setOutputPath();
+	bool selectOutputPath();
 
 public slots:
 	void openTemplateTriggered();

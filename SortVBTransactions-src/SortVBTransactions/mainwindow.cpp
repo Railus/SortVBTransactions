@@ -11,15 +11,14 @@
 #include "main.h"
 #include "Transaction.h"
 #include "TransactionGroups.h"
+#include "HelperFunctions.h"
 
 const QString templatePath = "TemplatePath";
 const QString transactionsPath = "TransactionsPath";
 const QString outputFile = "outputFile";
 
-inline void initializeFileDialog(QFileDialog &dialog, QString pathInConfig = "")
+void initializeFileDialog(QFileDialog &dialog, QString pathInConfig = "")
 {
-
-
 	if (!pathInConfig.isEmpty()) {
 		QSettings settings(QDir::currentPath() + "/config.ini", QSettings::IniFormat);
 		QString temp = settings.value(pathInConfig, QDir::currentPath()).toString();
@@ -65,35 +64,17 @@ void MainWindow::openTemplateTriggered()
 			delete ui->treeWidget->topLevelItem(0);
 		}
 
-		QFile file(m_template_location);
-		if (file.open(QIODevice::ReadOnly)) {
-			QTextStream stream(&file);
-			QString temp_line;
-
-			while (stream.readLineInto(&temp_line)) {
-				QStringList list1(temp_line.split(";", QString::KeepEmptyParts));
-				if (list1.length() > 0 && !list1[0].isEmpty()) {
-					cTransactionGroups *itm = new cTransactionGroups();
-					itm->setText(0, QApplication::translate("MainWindow", list1[0].toStdString().c_str(), nullptr));
-					itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-					ui->treeWidget->addTopLevelItem(itm);
-				}
-				else if(list1.length() > 1 && !list1[1].isEmpty()){
-					cTransactionGroups *itm = new cTransactionGroups();
-					itm->setText(0, QApplication::translate("MainWindow", list1[1].toStdString().c_str(), nullptr));
-					itm->setText(1, QApplication::translate("MainWindow", list1[2].toStdString().c_str(), nullptr));
-					itm->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-					ui->treeWidget->findItems("", Qt::MatchContains).last()->addChild(itm);
-				}
+		if (!HelperFunctions::createTemplateTree(m_template_location, *ui->treeWidget))
+		{
+			if (!m_transaction_location.isEmpty()) {
+				ui->pushButton->setEnabled(true);
 			}
 		}
 		else {
-			//Error File could not be opened
+			m_template_location.clear();
+			ui->pushButton->setEnabled(false);
 		}
 
-		if(!m_transaction_location.isEmpty()){
-			ui->pushButton->setEnabled(true);
-		}
 	}
 	else {
 		m_transaction_location.clear();
@@ -123,120 +104,42 @@ void MainWindow::openTransactionTriggered()
 	}
 }
 
-void MainWindow::setOutputPath() 
-{
+bool MainWindow::selectOutputPath() {
+
+	bool error_b = false;
 	QSettings settings(QDir::currentPath() + "/config.ini", QSettings::IniFormat);
 	QString temp = settings.value(outputFile, QString("%1/ProcessedTransaction.csv").arg(QDir::currentPath())).toString();
 
 	m_output_location = QFileDialog::getSaveFileName(this, tr("Save File"), temp,tr("*.csv"));
 
-	settings.setValue(outputFile, m_output_location);
+	if (!m_output_location.isEmpty())
+	{
+		settings.setValue(outputFile, m_output_location);
+	}
+	else {
+		error_b = true;
+	}
+	return error_b;
 }
 
 void MainWindow::generateProcessedFile() {
-	setOutputPath();
-
-	WCHAR currentPath_tchar[MAX_PATH + 1] = L"";
-	DWORD pathLen = GetCurrentDirectory(MAX_PATH, currentPath_tchar);
-	//Let's convert to string...
-	std::wstring currentPath_wstring(currentPath_tchar); //convert to wstring
-	std::string currentPath(currentPath_wstring.begin(), currentPath_wstring.end());//and convert to string.
-
-	/**********************/
-	//Read all rows of transaction
-	/**********************/
+	bool error_b = false;
 	QStringList csv_rows;
-	QFile file(m_transaction_location);
-	if (file.open(QIODevice::ReadOnly)) {
-		QTextStream stream(&file);
-		QString line;
-		QString temp_line;
-		while (stream.readLineInto(&temp_line)) {
-			if (!temp_line.isEmpty()) {
-				line += temp_line;
-				if (line.back() == '\"' ||
-					line.back() == ';')
-				{
-					//current line ends
-					csv_rows.append(line);
-					line.clear();
-				}
-			}
-		}
-	}
-	else {
-		//Error File could not be opened
-	}
-
-	/**********************/
-	//Processing row vector
-	/**********************/
-	// Delete first unnescessary rows including "buchungstag" in the first column
-	for (auto it_vec = csv_rows.begin(); it_vec != csv_rows.end(); it_vec++) {
-		QStringList list1 = it_vec->split(";",QString::SkipEmptyParts);
-		if (list1.size() < 1) { // Simple format check
-			return;
-		}
-		if (list1[0] == "\"Buchungstag\"") {
-			csv_rows.erase(csv_rows.begin(), it_vec+1);
-		}
-		if (list1.size() > 1 && list1[1] == "\"Anfangssaldo\"") {
-			csv_rows.erase(it_vec, csv_rows.end());
-			break;
-		}
-	}
-
-
-	//Process transactions
-	for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
-		cTransactionGroups* transactionGroupPtr = dynamic_cast<cTransactionGroups*>(ui->treeWidget->topLevelItem(i));
-		if (transactionGroupPtr != nullptr) {
-			transactionGroupPtr->clear();
-		}
-	}
-
 	QVector<TransactionPtr> unsorted_transactions;
-	for (auto it_vec = csv_rows.cbegin(); it_vec != csv_rows.cend(); it_vec++) {
-		QStringList list1 = it_vec->split(";");
-		bool inserted_b = false;
 
-		TransactionPtr transPtr(new Transaction(list1));
-		for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
-			cTransactionGroups* transactionGroupPtr = dynamic_cast<cTransactionGroups*>(ui->treeWidget->topLevelItem(i));
-			if (transactionGroupPtr != nullptr) {
-				if (transactionGroupPtr->insertTransaction(transPtr)) {
-					inserted_b = true;
-					break;
-				}
-			}
-		}
-		if (!inserted_b) {
-			unsorted_transactions.push_back(transPtr);
-		}
+	error_b |= selectOutputPath();
+
+	if (!error_b) {
+		error_b |= HelperFunctions::getTransactionRowsFromFile(m_transaction_location, csv_rows);
 	}
 
-	/**********************/
-	//Output of processed data
-	file.setFileName(m_output_location);
-	if (file.open(QIODevice::ReadWrite)) {
-		file.resize(0);
-		QTextStream stream(&file);
-		for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
-			cTransactionGroups* transactionGroupPtr = dynamic_cast<cTransactionGroups*>(ui->treeWidget->topLevelItem(i));
-			if (transactionGroupPtr != nullptr) {
-				transactionGroupPtr->write(stream);
-			}
-		}
-		//Print all unsorted transactions
-		if (!unsorted_transactions.isEmpty()) {
-			stream << endl << "Unsortierte Transaktionen" << endl;
-			for (auto it = unsorted_transactions.cbegin(); it != unsorted_transactions.cend(); it++) {
-				stream << it->data()->getLine() << endl;
-			}
-		}
-		file.close();
+	if (!error_b) {
+		error_b |= HelperFunctions::fillTransactionsIntoTreeWidget(*ui->treeWidget, csv_rows, unsorted_transactions);
 	}
-	
+
+	if (!error_b) {
+		error_b |= HelperFunctions::createSortedFile(*ui->treeWidget, m_output_location, unsorted_transactions);
+	}	
 }
 
 void MainWindow::addItem()

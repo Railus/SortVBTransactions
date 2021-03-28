@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QSharedPointer>
+#include <QTextStream>
 
 class Transaction
 {
@@ -10,27 +11,25 @@ public:
 	Transaction(QStringList);
 	virtual ~Transaction() {};
 
-	const double& getUmsatz(void) const { return m_umsatz; };
-	const QString& getVerwendungszweck(void) const { return m_verwendungszweck; };
-	const QString& getEmpfaenger(void) const { return m_empfaenger; };
+	const double& getUmsatz(void) const { return m_volume; };
 
-	QString getLine(void) const;
+	void writeLine(QTextStream& stream) const;
 	bool containsKeyword(const QString& keyword);
 
 private:
 	QString m_buchungstag;
 	QString m_valuta;
-	QString m_auftragsgeber;
-	QString m_empfaenger;
-	QString m_kontonr;
+	QString m_sender;
+	QString m_receiver;
+	QString m_accNr;
 	QString m_iban;
 	QString m_blz;
 	QString m_bic;
-	QString m_verwendungszweck;
-	QString m_kundenref;
-	QString m_waehrung;
-	double m_umsatz;
-	char m_soll_haben;
+	QString m_reference;
+	QString m_customRef;
+	QString m_currency;
+	double m_volume;
+	QChar m_soll_haben;
 };
 typedef QSharedPointer<Transaction> TransactionPtr;
 
