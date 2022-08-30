@@ -59,13 +59,14 @@ namespace HelperFunctions {
 			while (stream.readLineInto(&temp_line)) {
 				if (!temp_line.isEmpty()) {
 					line += temp_line;
-					if (line.back() == '\"' ||
-						line.back() == ';')
-					{
+					/*if (line.back() == '\"' ||
+						line.back() == ';' ||
+						line.back() == '\n')
+					{*/
 						//current line ends
 						transactionList.append(line);
 						line.clear();
-					}
+					//}
 				}
 			}
 			file.close();
@@ -73,19 +74,29 @@ namespace HelperFunctions {
 
 			// Delete first unnescessary rows including "Buchungstag" in the first column
 			// and last unnescessary rows from "Anfangssaldo" in the first column
+			bool foundFirstTransaction_b = false;
+			bool foundLastTransaction = false;
 			for (auto it_vec = transactionList.begin(); it_vec != transactionList.end(); it_vec++) {
 				QStringList list1 = it_vec->split(";", QString::SkipEmptyParts);
-				if (list1.size() < 1) { // Simple format check
-					error_b = true;
-					break;
+				if (list1.size() < 1)
+				{
+					if (foundFirstTransaction_b)
+					{
+						transactionList.erase(it_vec, transactionList.end());
+						foundFirstTransaction_b = true;
+						break;
+					}
 				}
-				if (list1[0] == "\"Buchungstag\"") {
+				else if (list1[0] == "Bezeichnung Auftragskonto")
+				{
 					transactionList.erase(transactionList.begin(), it_vec + 1);
-				}
-				if (list1.size() > 1 && list1[1] == "\"Anfangssaldo\"") {
-					transactionList.erase(it_vec, transactionList.end());
+					foundFirstTransaction_b = true;
 					break;
 				}
+			}
+			if (true != foundFirstTransaction_b)
+			{
+				error_b = true;
 			}
 		}
 		else {

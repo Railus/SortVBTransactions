@@ -4,35 +4,35 @@
 Transaction::Transaction(QStringList qlist)
 {
 	if (qlist.size() == TRANSACTION_ROWS) {
-		m_buchungstag = qlist[0];
-		m_valuta = qlist[1];
-		m_sender = qlist[2];
-		m_receiver = qlist[3];
-		m_accNr = qlist[4];
-		m_iban = qlist[5];
-		m_blz = qlist[6];
-		m_bic = qlist[7];
-		m_reference = qlist[8];
-		m_customRef = qlist[9];
-		m_currency = qlist[10];
+		m_buchungstag = qlist[4];
+		m_valuta = qlist[5];
+		m_sender = "Simon Dwucet"; 
+		m_receiver = qlist[6]; 
+		m_accNr = "";
+		m_iban = qlist[7];
+		m_blz = "NA"; 
+		m_bic = qlist[8]; 
+		m_reference = qlist[9];
+		m_customRef = qlist[10];
+		m_currency = qlist[12];
 		qlist[11].replace(",", ".");
 		qlist[11].chop(1);
-		qlist[11] = qlist[11].mid(1);
+		//qlist[12] = qlist[12].mid(1);
 		// Remove double dot sign
-		if (1 < qlist[11].count('.')) { qlist[11].remove(qlist[11].indexOf('.'),1); };
-		m_soll_haben = static_cast<char>(qlist[12].toStdString()[1]);
-		if (m_soll_haben == 'S') {
+		if (1 < qlist[11].count('.')) { qlist[11].remove(qlist[11].indexOf('.'), 1); };
+		//m_soll_haben = static_cast<char>(qlist[13].toStdString()[0]);
+		//if (m_soll_haben == 'S') {
 			m_volume = qlist[11].toDouble(); //delete "/"" at beginning and end of the string
-		}
-		else if (m_soll_haben == 'H') {
-			m_volume = -qlist[11].toDouble(); //delete "/"" at beginning and end of the string
-		}
-		else {
-			qDebug("Missing transaction identifier \'H\'/\'S\'!");
-		}
+		//}
+		//else if (m_soll_haben == 'H') {
+		//	m_volume = -qlist[12].toDouble(); //delete "/"" at beginning and end of the string
+		//}
+		//else {
+		//	qDebug("Missing transaction identifier \'H\'/\'S\'!");
+		//}
 	}
 	else {
-		qDebug("Row has not 13 columns!");
+		qDebug("Row has not 19 columns!");
 	}
 }
 
@@ -62,7 +62,7 @@ bool Transaction::containsKeyword(const QString& keyword) {
 	{
 		ret_val = true;
 	}
-	else if (m_reference.contains(keyword, Qt::CaseInsensitive))
+	else if (m_customRef.contains(keyword, Qt::CaseInsensitive))
 	{
 		ret_val = true;
 	}
